@@ -1,0 +1,23 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/constants/app_constants.dart';
+import '../l10n/app_localizations.dart';
+import 'router/app_router.dart';
+import 'theme/app_theme.dart';
+
+class SmartCoupleApp extends ConsumerWidget {
+  const SmartCoupleApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
+      title: AppConstants.name,
+      routerConfig: ref.watch(appRouterProvider),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    );
+  }
+}
