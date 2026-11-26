@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "571912452328",
+    "project_id": "smart-couple-app-3b1f7",
+    "storage_bucket": "smart-couple-app-3b1f7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571912452328:android:912a82367075677fa0715d",
+        "android_client_info": {
+          "package_name": "com.smartcouple.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5fhR6sByZHvZdGaFNaAt8-G_4soHzifs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
