@@ -20,6 +20,44 @@ service cloud.firestore {
         && data.createdAt is timestamp && data.updatedAt is timestamp;
     }
 
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function profilePath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function workspacePath(id) {
+      return /databases/$(database)/documents/couples/$(id);
+    }
+
+    function validWorkspace(data) {
+      let fields = ['name', 'createdBy', 'memberIds', 'currency', 'createdAt', 'updatedAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 60
+        && data.name.matches('.*\\S.*')
+        && data.createdBy is string && data.memberIds is list
+        && data.memberIds.size() == 1 && data.memberIds[0] == data.createdBy
+        && data.currency in ['LKR', 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'INR']
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function initialWorkspace(data, uid) {
+      return validWorkspace(data) && data.createdBy == uid
+        && data.createdAt == request.time && data.updatedAt == request.time;
+    }
+
+    function initialProfileLink(uid) {
+      let id = request.resource.data.coupleId;
+      let changes = request.resource.data.diff(resource.data).affectedKeys();
+      return resource.data.coupleId == null && id is string
+        && id.matches('^[a-zA-Z0-9]{20}$')
+        && changes.hasOnly(['coupleId', 'updatedAt'])
+        && !exists(workspacePath(id))
+        && initialWorkspace(getAfter(workspacePath(id)).data, uid);
+    }
+
     match /users/{uid} {
       allow get: if ownsVerifiedProfile(uid);
       allow create: if ownsVerifiedProfile(uid)
@@ -29,8 +67,25 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow update: if ownsVerifiedProfile(uid)
         && validProfile(request.resource.data, uid)
-        && request.resource.data.diff(resource.data).affectedKeys()
+        && (request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['username', 'preferredLanguage', 'updatedAt'])
+          || initialProfileLink(uid))
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /couples/{id} {
+      allow get: if verified() && request.auth.uid in resource.data.memberIds;
+      allow create: if verified() && id.matches('^[a-zA-Z0-9]{20}$')
+        && initialWorkspace(request.resource.data, request.auth.uid)
+        && exists(profilePath(request.auth.uid))
+        && get(profilePath(request.auth.uid)).data.coupleId == null
+        && getAfter(profilePath(request.auth.uid)).data.coupleId == id;
+      allow update: if verified()
+        && resource.data.createdBy == request.auth.uid
+        && request.auth.uid in resource.data.memberIds
+        && validWorkspace(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'currency', 'updatedAt'])
         && request.resource.data.updatedAt == request.time;
     }
   }

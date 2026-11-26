@@ -15,7 +15,7 @@ const _host = '10.0.2.2';
 const _password = 'emulator-test-password';
 const _phase = String.fromEnvironment('PROFILE_TEST_PHASE');
 
-Future<void> _verify(
+Future<void> verifyEmulatedProfileAccount(
   FirebaseAuth auth,
   FirebaseAuthRepository repository,
   String email,
@@ -78,7 +78,7 @@ void main() {
     final suffix = DateTime.now().microsecondsSinceEpoch;
     final email = 'profile-$suffix@example.test';
     await accounts.register('Camille', email, _password, 'en');
-    await _verify(auth, accounts, email);
+    await verifyEmulatedProfileAccount(auth, accounts, email);
 
     // Simulate an existing Auth account signing in with no Firestore document.
     await accounts.signOut();
@@ -137,7 +137,7 @@ void main() {
     );
     final otherEmail = 'other-$suffix@example.test';
     await accounts.register('Morgan', otherEmail, _password, 'en');
-    await _verify(auth, accounts, otherEmail);
+    await verifyEmulatedProfileAccount(auth, accounts, otherEmail);
     final other = (await accounts.watchSession().first)!;
     await profiles.ensureProfile(other, 'en');
     expect((await profiles.getProfile(other.uid))?.username, 'Morgan');

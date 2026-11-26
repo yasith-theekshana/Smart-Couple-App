@@ -117,3 +117,107 @@ await commit('update without server timestamp denied', update(owner, { username:
 await check('deletion denied', doc(owner.uid), 403, { method: 'DELETE', token: owner.token });
 await check('other collections denied', firestore + '/couples/example', 403, { token: owner.token });
 console.log(checks + ' Firestore rules checks passed.');
+
+if (process.argv.includes('--workspaces')) {
+  const newId = () => randomUUID().replaceAll('-', '').slice(0, 20);
+  const workspacePath = id => database + '/couples/' + id;
+  const workspaceUrl = id => firestore + '/couples/' + id;
+  const workspaceWrite = (account, id, fields = {}) => ({
+    update: { name: workspacePath(id), fields: {
+      name: text('Our Home'), createdBy: text(account.uid),
+      memberIds: { arrayValue: { values: [text(account.uid)] } },
+      currency: text('LKR'), ...fields,
+    } },
+    updateTransforms: [serverTime('createdAt'), serverTime('updatedAt')],
+    currentDocument: { exists: false },
+  });
+  const workspaceUpdate = (id, fields) => ({
+    update: { name: workspacePath(id), fields },
+    updateMask: { fieldPaths: Object.keys(fields) },
+    updateTransforms: [serverTime('updatedAt')],
+    currentDocument: { exists: true },
+  });
+  const link = (account, id) => update(account, { coupleId: text(id) });
+  const batch = (label, writes, status, token) =>
+    check(label, firestore + ':commit', status, {
+      method: 'POST', body: { writes }, token,
+    });
+
+  const id = newId();
+  const missingProfile = await account(true);
+  await batch('workspace requires profile', [
+    workspaceWrite(missingProfile, id),
+  ], 403, missingProfile.token);
+  await batch('anonymous workspace create denied', [
+    workspaceWrite(owner, id), link(owner, id),
+  ], 403);
+  await batch('unverified workspace create denied', [
+    workspaceWrite(unverified, id), link(unverified, id),
+  ], 403, unverified.token);
+  await batch('workspace create without profile link denied', [
+    workspaceWrite(owner, id),
+  ], 403, owner.token);
+  await batch('profile link without workspace create denied', [
+    link(owner, id),
+  ], 403, owner.token);
+  await batch('atomic create with wrong creator denied', [
+    workspaceWrite(owner, id, { createdBy: text(other.uid) }), link(owner, id),
+  ], 403, owner.token);
+  await batch('atomic create with additional member denied', [
+    workspaceWrite(owner, id, { memberIds: { arrayValue: { values: [text(owner.uid), text(other.uid)] } } }),
+    link(owner, id),
+  ], 403, owner.token);
+  await batch('blank workspace name denied', [
+    workspaceWrite(owner, id, { name: text('  ') }), link(owner, id),
+  ], 403, owner.token);
+  await batch('oversized workspace name denied', [
+    workspaceWrite(owner, id, { name: text('x'.repeat(61)) }), link(owner, id),
+  ], 403, owner.token);
+  await batch('unsupported workspace currency denied', [
+    workspaceWrite(owner, id, { currency: text('XYZ') }), link(owner, id),
+  ], 403, owner.token);
+  await batch('private extra workspace field denied', [
+    workspaceWrite(owner, id, { email: text(owner.email) }), link(owner, id),
+  ], 403, owner.token);
+  await batch('link cannot update other profile fields', [
+    workspaceWrite(owner, id), update(owner, { coupleId: text(id), username: text('Other') }),
+  ], 403, owner.token);
+
+  const untouched = await request('profile unchanged after rejected batches', doc(owner.uid), 200, { token: owner.token });
+  assert.equal(untouched.fields.coupleId.nullValue, null);
+  await batch('valid atomic create reuses ID after rejected writes', [
+    workspaceWrite(owner, id), link(owner, id),
+  ], 200, owner.token);
+  const linked = await request('profile linked atomically', doc(owner.uid), 200, { token: owner.token });
+  assert.equal(linked.fields.coupleId.stringValue, id);
+  const next = newId();
+  await batch('second workspace creation denied', [
+    workspaceWrite(owner, next), link(owner, next),
+  ], 403, owner.token);
+  await commit('profile can still be edited while linked', update(owner, { username: text('Camille Updated') }), 200, owner.token);
+  await check('workspace member can read', workspaceUrl(id), 200, { token: owner.token });
+  await check('workspace non-member cannot read', workspaceUrl(id), 403, { token: other.token });
+  await check('anonymous workspace read denied', workspaceUrl(id), 403);
+  await check('unverified workspace read denied', workspaceUrl(id), 403, { token: unverified.token });
+  await check('workspaces cannot be listed', firestore + '/couples', 403, { token: owner.token });
+  await check('workspace subcollections denied', workspaceUrl(id) + '/tasks/item', 403, { token: owner.token });
+  await commit('workspace settings update allowed', workspaceUpdate(id, {
+    name: text('Our Family'), currency: text('EUR'),
+  }), 200, owner.token);
+  await commit('workspace currency must be supported on update', workspaceUpdate(id, {
+    currency: text('XYZ'),
+  }), 403, owner.token);
+  await commit('workspace creation timestamp is immutable', workspaceUpdate(id, {
+    createdAt: { timestampValue: '2025-01-01T00:00:00Z' },
+  }), 403, owner.token);
+  await commit('workspace settings require server timestamp', {
+    ...workspaceUpdate(id, { name: text('Other') }), updateTransforms: [],
+  }, 403, owner.token);
+  await commit('non-member workspace update denied', workspaceUpdate(id, { name: text('Other') }), 403, other.token);
+  await commit('member list change denied', workspaceUpdate(id, {
+    memberIds: { arrayValue: { values: [text(owner.uid), text(other.uid)] } },
+  }), 403, owner.token);
+  await commit('ownership change denied', workspaceUpdate(id, { createdBy: text(other.uid) }), 403, owner.token);
+  await check('workspace deletion denied', workspaceUrl(id), 403, { method: 'DELETE', token: owner.token });
+  console.log(checks + ' combined Firestore rules checks passed.');
+}

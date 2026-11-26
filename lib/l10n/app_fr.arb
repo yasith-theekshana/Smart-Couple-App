@@ -211,5 +211,19 @@
   "profileSyncName": "Synchroniser le nom d\u2019utilisateur",
   "profileMissing": "Ce profil est indisponible. R\u00e9essayez de le charger.",
   "profilePermission": "Firestore a refus\u00e9 l\u2019acc\u00e8s \u00e0 votre profil.",
-  "profileFailure": "Une erreur est survenue lors de l\u2019acc\u00e8s \u00e0 votre profil."
+  "profileFailure": "Une erreur est survenue lors de l\u2019acc\u00e8s \u00e0 votre profil.",
+  "privateWorkspaceName": "Nom de l\u2019espace",
+  "privateWorkspaceNameInvalid": "Saisissez un nom d\u2019espace de 1 \u00e0 60 caract\u00e8res.",
+  "privateCurrency": "Devise",
+  "privateCurrencyInvalid": "S\u00e9lectionnez une devise prise en charge.",
+  "privateCreateWorkspace": "Cr\u00e9er l\u2019espace",
+  "privateMembers": "Membres",
+  "privateMembership": "Statut",
+  "privateCreator": "Cr\u00e9ateur",
+  "privateMember": "Membre",
+  "privatePartnerPending": "Votre espace est pr\u00eat. Vous pourrez inviter votre partenaire \u00e0 la prochaine \u00e9tape.",
+  "privateWorkspaceUnavailable": "Cet espace est indisponible. R\u00e9essayez de le charger.",
+  "privateWorkspacePermission": "Firestore a refus\u00e9 l\u2019acc\u00e8s \u00e0 cet espace.",
+  "privateWorkspaceFailure": "Une erreur est survenue dans votre espace. Veuillez r\u00e9essayer.",
+  "privateWorkspaceCreated": "Espace cr\u00e9\u00e9 le"
 }

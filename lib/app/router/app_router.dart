@@ -10,6 +10,8 @@ import '../../features/authentication/application/auth_controllers.dart';
 import '../../features/authentication/presentation/auth_screens.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/couple/presentation/workspace_screen.dart';
+import '../../features/couple/presentation/private_workspace_screen.dart';
+import '../../features/profile/application/profile_providers.dart';
 import '../../features/finance/presentation/finance_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/account_screens.dart';
@@ -23,6 +25,9 @@ GoRouter createAppRouter(Ref ref, {bool enableDemoRoutes = false}) {
   final refresh = ValueNotifier(0);
   ref.listen(authSessionProvider, (_, _) => refresh.value++);
   ref.listen(registrationControllerProvider, (_, _) => refresh.value++);
+  if (!enableDemoRoutes) {
+    ref.listen(activeProfileProvider, (_, _) => refresh.value++);
+  }
   final router = GoRouter(
     refreshListenable: refresh,
     redirect: (_, state) {
@@ -52,7 +57,23 @@ GoRouter createAppRouter(Ref ref, {bool enableDemoRoutes = false}) {
       if (!user.verified) {
         return path == '/verify' || path == '/language' ? null : '/verify';
       }
-      if (!enableDemoRoutes) return path == '/profile' ? null : '/profile';
+      if (!enableDemoRoutes) {
+        final profile = ref.read(activeProfileProvider);
+        if (profile.isLoading || profile.asData?.value?.uid != user.uid) {
+          return path == '/profile-loading' ? null : '/profile-loading';
+        }
+        if (path == '/workspace/settings' &&
+            profile.asData?.value?.coupleId == null) {
+          return '/workspace';
+        }
+        return const {
+              '/profile',
+              '/workspace',
+              '/workspace/settings',
+            }.contains(path)
+            ? null
+            : '/workspace';
+      }
       if (const {
         '/splash',
         '/auth-error',
@@ -92,10 +113,21 @@ GoRouter createAppRouter(Ref ref, {bool enableDemoRoutes = false}) {
         ('/register', const AuthFormScreen(AuthMode.register)),
         ('/forgot-password', const AuthFormScreen(AuthMode.reset)),
         ('/verify', const VerifyEmailScreen()),
-        ('/workspace', const WorkspaceScreen()),
-        ('/workspace/settings', const WorkspaceScreen(settings: true)),
+        (
+          '/workspace',
+          enableDemoRoutes
+              ? const WorkspaceScreen()
+              : const PrivateWorkspaceScreen(),
+        ),
+        (
+          '/workspace/settings',
+          enableDemoRoutes
+              ? const WorkspaceScreen(settings: true)
+              : const PrivateWorkspaceScreen(settings: true),
+        ),
         ('/articles', const ArticleLibrary()),
-        ('/profile', const ProfileScreen()),
+        ('/profile', ProfileScreen(workspaceBack: !enableDemoRoutes)),
+        ('/profile-loading', const ProfileScreen()),
         ('/authenticated', const ProfileScreen()),
         ('/settings', const SettingsScreen()),
         ('/language', const LanguageScreen()),

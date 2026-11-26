@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/design_system.dart';
@@ -10,7 +11,8 @@ import '../application/profile_providers.dart';
 import '../data/user_profile.dart';
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({this.workspaceBack = false, super.key});
+  final bool workspaceBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +22,11 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       body: AppPage(
         children: [
-          AppHeader(title: context.strings.profile, back: false),
+          AppHeader(
+            title: context.strings.profile,
+            back: workspaceBack,
+            onBack: () => context.go('/workspace'),
+          ),
           if (state.hasError)
             _ProfileStatus(error: state.error)
           else if (state.isLoading ||
@@ -58,7 +64,7 @@ class _ProfileStatus extends ConsumerWidget {
             s.authRetry,
             onPressed: () => ref.invalidate(activeProfileProvider),
           ),
-          const _SignOutButton(),
+          const AccountSignOutButton(),
         ],
       ),
     );
@@ -231,7 +237,7 @@ class _ProfileDetailsState extends ConsumerState<_ProfileDetails> {
                   textAlign: TextAlign.center,
                 ),
               ),
-            _SignOutButton(disabled: _busy),
+            AccountSignOutButton(disabled: _busy),
           ],
         ),
       ),
@@ -261,15 +267,16 @@ class _ProfileField extends StatelessWidget {
   );
 }
 
-class _SignOutButton extends ConsumerStatefulWidget {
-  const _SignOutButton({this.disabled = false});
+class AccountSignOutButton extends ConsumerStatefulWidget {
+  const AccountSignOutButton({this.disabled = false, super.key});
   final bool disabled;
 
   @override
-  ConsumerState<_SignOutButton> createState() => _SignOutButtonState();
+  ConsumerState<AccountSignOutButton> createState() =>
+      AccountSignOutButtonState();
 }
 
-class _SignOutButtonState extends ConsumerState<_SignOutButton> {
+class AccountSignOutButtonState extends ConsumerState<AccountSignOutButton> {
   bool _busy = false;
 
   Future<void> _signOut() async {

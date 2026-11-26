@@ -211,5 +211,19 @@
   "profileSyncName": "Sync username",
   "profileMissing": "This profile is unavailable. Try loading it again.",
   "profilePermission": "Firestore denied access to your profile.",
-  "profileFailure": "Something went wrong while accessing your profile."
+  "profileFailure": "Something went wrong while accessing your profile.",
+  "privateWorkspaceName": "Workspace name",
+  "privateWorkspaceNameInvalid": "Enter a workspace name from 1 to 60 characters.",
+  "privateCurrency": "Currency",
+  "privateCurrencyInvalid": "Select a supported currency.",
+  "privateCreateWorkspace": "Create workspace",
+  "privateMembers": "Members",
+  "privateMembership": "Membership",
+  "privateCreator": "Creator",
+  "privateMember": "Member",
+  "privatePartnerPending": "Your workspace is ready. You\u2019ll be able to invite your partner in the next step.",
+  "privateWorkspaceUnavailable": "This workspace is unavailable. Try loading it again.",
+  "privateWorkspacePermission": "Firestore denied access to this workspace.",
+  "privateWorkspaceFailure": "Something went wrong with your workspace. Please try again.",
+  "privateWorkspaceCreated": "Workspace created"
 }

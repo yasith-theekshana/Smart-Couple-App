@@ -59,5 +59,20 @@ class TestProfiles implements UserProfileRepository {
     _updates.add(profile);
   }
 
+  void linkWorkspace(String uid, String id) {
+    final original = profiles[uid]!;
+    final profile = UserProfile(
+      uid: uid,
+      username: original.username,
+      email: original.email,
+      preferredLanguage: original.preferredLanguage,
+      createdAt: original.createdAt,
+      updatedAt: original.updatedAt,
+      coupleId: id,
+    );
+    profiles[uid] = profile;
+    _updates.add(profile);
+  }
+
   Future<void> close() => _updates.close();
 }

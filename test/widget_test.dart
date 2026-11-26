@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_couple/app/app.dart';
 import 'package:smart_couple/app/router/app_router.dart';
 import 'package:smart_couple/core/services/demo_state.dart';
+import 'package:smart_couple/features/couple/application/workspace_providers.dart';
+import 'package:smart_couple/features/couple/data/couple_workspace.dart';
+import 'package:smart_couple/features/couple/data/couple_workspace_repository.dart';
 import 'package:smart_couple/features/authentication/application/auth_repository.dart';
 
 import 'package:smart_couple/features/profile/application/profile_providers.dart';
@@ -19,6 +24,7 @@ Future<ProviderContainer> startApp(
   TestAuth? auth,
   TestProfiles? profiles,
   bool enableDemoRoutes = true,
+  CoupleWorkspaceRepository? workspaces,
 }) async {
   final repository = auth ?? TestAuth(verifiedSession);
   final profileRepository = profiles ?? TestProfiles();
@@ -30,6 +36,8 @@ Future<ProviderContainer> startApp(
         authRepositoryProvider.overrideWithValue(repository),
         userProfileRepositoryProvider.overrideWithValue(profileRepository),
         profileEditorProvider.overrideWithValue(_TestEditor(profileRepository)),
+        if (workspaces != null)
+          workspaceRepositoryProvider.overrideWithValue(workspaces),
         if (enableDemoRoutes)
           appRouterProvider.overrideWith(
             (ref) => createAppRouter(ref, enableDemoRoutes: true),
@@ -38,7 +46,7 @@ Future<ProviderContainer> startApp(
       child: const SmartCoupleApp(),
     ),
   );
-  await tester.pump();
+  await tester.pumpAndSettle();
   final container = ProviderScope.containerOf(
     tester.element(find.byType(SmartCoupleApp)),
     listen: false,
@@ -59,6 +67,54 @@ Future<void> go(
 
 void main() {
   testWidgets(
+    'Workspace creation validates, links, and loads localized overview',
+    (tester) async {
+      final profiles = TestProfiles();
+      final auth = TestAuth(verifiedSession);
+      final workspaces = _TestWorkspaces(profiles);
+      addTearDown(workspaces.close);
+      final container = await startApp(
+        tester,
+        auth: auth,
+        profiles: profiles,
+        workspaces: workspaces,
+        enableDemoRoutes: false,
+      );
+      expect(find.text('LKR'), findsWidgets);
+      await tester.tap(find.text('CREATE WORKSPACE'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Enter a workspace name from 1 to 60 characters.'),
+        findsOneWidget,
+      );
+      await tester.enterText(find.byType(TextFormField).first, 'Our Home');
+      await tester.tap(find.text('CREATE WORKSPACE'));
+      await tester.pumpAndSettle();
+      expect(find.text('Our Home'), findsOneWidget);
+      expect(find.text('1 / 2'), findsOneWidget);
+      expect(workspaces.watching, isTrue);
+      await go(tester, container, '/workspace/settings');
+      await tester.enterText(find.byType(TextFormField).first, 'Our Family');
+      await tester.tap(find.text('SAVE CHANGES'));
+      await tester.pumpAndSettle();
+      expect(find.text('Our Family'), findsOneWidget);
+      await profiles.updateProfile('test', language: 'fr');
+      await tester.pumpAndSettle();
+      expect(find.text('Cr\u00e9ateur'), findsOneWidget);
+      auth.setSession((
+        uid: 'other',
+        email: 'other@example.test',
+        name: 'Morgan',
+        verified: true,
+        accountCreatedAt: null,
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Our Family'), findsNothing);
+      expect(workspaces.watching, isFalse);
+    },
+  );
+
+  testWidgets(
     'Verified users edit their profile while demo routes stay closed',
     (tester) async {
       final profiles = TestProfiles();
@@ -68,8 +124,9 @@ void main() {
         profiles: profiles,
         enableDemoRoutes: false,
       );
-      expect(find.text('Camille'), findsOneWidget);
+      expect(find.text('CREATE WORKSPACE'), findsOneWidget);
       expect(find.text('Finances'), findsNothing);
+      await go(tester, container, '/profile');
       await tester.tap(find.text('EDIT PROFILE'));
       await tester.pumpAndSettle();
       final username = find.byType(TextFormField);
@@ -128,7 +185,7 @@ void main() {
     profiles.loadError = null;
     await tester.tap(find.text('TRY AGAIN'));
     await tester.pumpAndSettle();
-    expect(find.text('Camille'), findsOneWidget);
+    expect(find.text('CREATE WORKSPACE'), findsOneWidget);
   });
 
   testWidgets(
@@ -136,7 +193,7 @@ void main() {
     (tester) async {
       final profiles = TestProfiles();
       final auth = TestAuth(verifiedSession);
-      await startApp(
+      final container = await startApp(
         tester,
         path: '/profile',
         auth: auth,
@@ -153,6 +210,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.text('Camille'), findsNothing);
+      await go(tester, container, '/profile');
       expect(find.text('Morgan'), findsOneWidget);
       expect(profiles.activeListeners, {'other'});
       await auth.signOut();
@@ -417,4 +475,61 @@ class _TestEditor extends ProfileEditor {
 
   @override
   Future<void> synchronizeName(UserProfile profile) async {}
+}
+
+class _TestWorkspaces implements CoupleWorkspaceRepository {
+  _TestWorkspaces(this.profiles);
+  final TestProfiles profiles;
+  final _events = StreamController<CoupleWorkspace>.broadcast();
+  CoupleWorkspace? current;
+  bool watching = false;
+
+  Future<void> close() => _events.close();
+
+  @override
+  Future<String> createWorkspace(
+    AuthSession user,
+    String name,
+    String currency,
+  ) async {
+    const id = 'testWorkspace';
+    current = CoupleWorkspace(
+      id: id,
+      name: name,
+      currency: currency,
+      memberIds: [user.uid],
+      createdBy: user.uid,
+    );
+    profiles.linkWorkspace(user.uid, id);
+    return id;
+  }
+
+  @override
+  Future<CoupleWorkspace?> getWorkspace(String id, String uid) async => current;
+
+  @override
+  Stream<CoupleWorkspace?> watchWorkspace(String id, String uid) =>
+      Stream.multi((stream) {
+        watching = true;
+        stream.add(current);
+        final subscription = _events.stream.listen(
+          stream.add,
+          onDone: stream.close,
+        );
+        stream.onCancel = () {
+          watching = false;
+          return subscription.cancel();
+        };
+      });
+
+  @override
+  Future<void> updateSettings(
+    CoupleWorkspace workspace,
+    String uid,
+    String name,
+    String currency,
+  ) async {
+    current = workspace.copyWith(name: name, currency: currency);
+    _events.add(current!);
+  }
 }
