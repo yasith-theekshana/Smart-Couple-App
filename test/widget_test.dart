@@ -4,12 +4,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_couple/app/app.dart';
 import 'package:smart_couple/app/router/app_router.dart';
 import 'package:smart_couple/core/services/demo_state.dart';
+import 'package:smart_couple/features/authentication/application/auth_repository.dart';
+
+import 'test_auth.dart';
 
 Future<ProviderContainer> startApp(
   WidgetTester tester, {
   String path = '/',
+  TestAuth? auth,
 }) async {
-  await tester.pumpWidget(const ProviderScope(child: SmartCoupleApp()));
+  final repository = auth ?? TestAuth(verifiedSession);
+  addTearDown(repository.close);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      child: const SmartCoupleApp(),
+    ),
+  );
   await tester.pump();
   final container = ProviderScope.containerOf(
     tester.element(find.byType(SmartCoupleApp)),
@@ -30,15 +41,59 @@ Future<void> go(
 }
 
 void main() {
-  testWidgets('Splash advances to welcome and opens the demo', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: SmartCoupleApp()));
-    await tester.pump();
-    expect(find.text('SMARTCOUPLE'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 1200));
+  testWidgets('Signed-out users see welcome and protected links go to login', (
+    tester,
+  ) async {
+    final container = await startApp(
+      tester,
+      path: '/welcome',
+      auth: TestAuth(null),
+    );
+    expect(find.text('SmartCouple'), findsOneWidget);
+    expect(find.text('Open demo workspace'), findsNothing);
+    await go(tester, container, '/finance');
+    expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.text('Finances'), findsNothing);
+  });
+
+  testWidgets('Login displays a localized network failure', (tester) async {
+    final container = await startApp(
+      tester,
+      path: '/login',
+      auth: TestAuth(null),
+    );
+    container.read(localeProvider.notifier).select(const Locale('fr'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open demo workspace'));
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'user@example.test');
+    await tester.enterText(fields.at(1), 'password');
+    await tester.tap(find.byType(FilledButton).first);
     await tester.pumpAndSettle();
-    expect(find.text('Florian & Sophie'), findsOneWidget);
+    expect(
+      find.text('Vérifiez votre connexion Internet et réessayez.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Unverified session is guarded and logout returns to login', (
+    tester,
+  ) async {
+    final auth = TestAuth((
+      uid: 'test',
+      email: 'user@example.test',
+      name: null,
+      verified: false,
+    ));
+    final container = await startApp(tester, path: '/tasks', auth: auth);
+    expect(find.text('Verify email'), findsOneWidget);
+    await tester.tap(find.byType(FilledButton).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Your email is verified'), findsOneWidget);
+    await tester.tap(find.byType(FilledButton).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsNWidgets(2));
+    await go(tester, container, '/authenticated');
+    expect(find.byType(TextFormField), findsNWidgets(2));
   });
 
   testWidgets('System back returns from a secondary tab to Home', (
@@ -114,9 +169,10 @@ void main() {
   );
 
   testWidgets(
-    'Registration validates confirmation and hands off to demo verification',
+    'Registration validates confirmation and starts Firebase verification through the repository',
     (tester) async {
-      await startApp(tester, path: '/register');
+      final auth = TestAuth(null);
+      await startApp(tester, path: '/register', auth: auth);
       final fields = find.byType(TextFormField);
       await tester.enterText(fields.at(0), 'Camille');
       await tester.enterText(fields.at(1), 'camille@example.test');
@@ -126,12 +182,14 @@ void main() {
       await tester.tap(find.text('CREATE ACCOUNT'));
       await tester.pumpAndSettle();
       expect(find.text('Passwords do not match.'), findsOneWidget);
+      expect(auth.registrations, 0);
       await tester.enterText(fields.at(3), 'samplePassword');
       await tester.ensureVisible(find.text('CREATE ACCOUNT'));
       await tester.tap(find.text('CREATE ACCOUNT'));
       await tester.pumpAndSettle();
       expect(find.text('Verify email'), findsOneWidget);
       expect(find.text('camille@example.test'), findsOneWidget);
+      expect(find.textContaining('Resend in'), findsOneWidget);
     },
   );
 
@@ -197,11 +255,7 @@ void main() {
         '/shopping',
         '/calendar',
         '/tasks',
-        '/welcome',
-        '/login',
-        '/register',
-        '/forgot-password',
-        '/verify',
+        '/authenticated',
         '/workspace',
         '/workspace/settings',
         '/articles',

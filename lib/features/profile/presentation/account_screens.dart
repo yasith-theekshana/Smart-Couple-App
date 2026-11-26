@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/services/demo_state.dart';
 import '../../../core/widgets/design_system.dart';
+import '../../authentication/application/auth_controllers.dart';
 
 class CoupleAvatar extends ConsumerWidget {
   const CoupleAvatar({this.size = 40, super.key});
@@ -139,11 +140,32 @@ class LanguageScreen extends StatelessWidget {
   );
 }
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _signingOut = false;
+
+  Future<void> _signOut() async {
+    setState(() => _signingOut = true);
+    try {
+      await ref.read(loginControllerProvider).signOut();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.strings.authFailure)));
+      }
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final s = context.strings;
     return Scaffold(
       body: AppPage(
@@ -171,10 +193,7 @@ class SettingsScreen extends ConsumerWidget {
           AppButton(
             s.signOut,
             outlined: true,
-            onPressed: () {
-              ref.read(demoSessionProvider.notifier).signOut();
-              context.go('/welcome');
-            },
+            onPressed: _signingOut ? null : _signOut,
           ),
         ],
       ),

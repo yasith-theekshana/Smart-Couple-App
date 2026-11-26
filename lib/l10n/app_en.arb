@@ -52,9 +52,9 @@
   "register": "Create account",
   "forgotPassword": "Forgot password?",
   "resetPassword": "Reset password",
-  "resetSent": "Demo password reset requested.",
+  "resetSent": "If an account exists for this email address, you\u2019ll receive a password reset link.",
   "verifyEmail": "Verify email",
-  "verifyHelp": "Confirm the email address to continue in this demo.",
+  "verifyHelp": "Open the verification link in your inbox, then return here to continue.",
   "openDemo": "Open demo workspace",
   "signOut": "Sign out",
   "workspace": "Couple workspace",
@@ -170,12 +170,36 @@
   "filters": "Filters and sorting",
   "openWorkspace": "Open workspace",
   "invitationDeclined": "Invitation declined",
-  "verifyAgain": "Resend confirmation",
+  "verifyAgain": "Resend verification email",
   "demoConfirmation": "Demo confirmation requested.",
   "invalidPartner": "Use your partner’s email address.",
   "premium": "Premium couple",
   "rentCategory": "Rent",
   "fuel": "Fuel",
   "leisure": "Leisure",
-  "status": "Status"
+  "status": "Status",
+  "authStartupError": "SmartCouple couldn\u2019t connect to its authentication service.",
+  "authRetry": "Try again",
+  "authShowPassword": "Show password",
+  "authHidePassword": "Hide password",
+  "authCheckVerification": "I\u2019ve verified my email",
+  "authStillUnverified": "Your email is still unverified. Open the link in your inbox and try again.",
+  "authVerificationSent": "Verification email sent.",
+  "authResendWait": "Resend in {seconds}s",
+  "authVerified": "Your email is verified",
+  "authDuplicate": "An account already uses this email address. Sign in or reset your password.",
+  "authInvalidEmail": "Enter a valid email address.",
+  "authInvalidCredentials": "The email or password is incorrect.",
+  "authNetwork": "Check your internet connection and try again.",
+  "authRateLimit": "Too many attempts. Please try again later.",
+  "authUnavailable": "Email and password authentication is currently unavailable.",
+  "authFailure": "Something went wrong. Please try again.",
+  "authRegistrationIncomplete": "Your account was created, but setup was interrupted. Resend the verification email and try again.",
+  "@authResendWait": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

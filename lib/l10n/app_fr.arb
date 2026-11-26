@@ -52,9 +52,9 @@
   "register": "Inscription",
   "forgotPassword": "Mot de passe oublié ?",
   "resetPassword": "Réinitialiser le mot de passe",
-  "resetSent": "Réinitialisation de démonstration demandée.",
+  "resetSent": "Si un compte existe pour cette adresse, vous recevrez un lien de r\u00e9initialisation du mot de passe.",
   "verifyEmail": "Vérifier le courriel",
-  "verifyHelp": "Confirmez l’adresse courriel pour continuer dans cette démonstration.",
+  "verifyHelp": "Ouvrez le lien de v\u00e9rification dans votre bo\u00eete de r\u00e9ception, puis revenez ici pour continuer.",
   "openDemo": "Ouvrir l’espace de démonstration",
   "signOut": "Se déconnecter",
   "workspace": "Espace couple",
@@ -170,12 +170,36 @@
   "filters": "Filtres et tris",
   "openWorkspace": "Ouvrir l’espace",
   "invitationDeclined": "Invitation refusée",
-  "verifyAgain": "Renvoyer la confirmation",
+  "verifyAgain": "Renvoyer le courriel de v\u00e9rification",
   "demoConfirmation": "Confirmation de démonstration demandée.",
   "invalidPartner": "Utilisez l’adresse courriel de votre partenaire.",
   "premium": "Couple premium",
   "rentCategory": "Loyer",
   "fuel": "Essence",
   "leisure": "Loisirs",
-  "status": "Statut"
+  "status": "Statut",
+  "authStartupError": "SmartCouple n\u2019a pas pu se connecter \u00e0 son service d\u2019authentification.",
+  "authRetry": "R\u00e9essayer",
+  "authShowPassword": "Afficher le mot de passe",
+  "authHidePassword": "Masquer le mot de passe",
+  "authCheckVerification": "J\u2019ai v\u00e9rifi\u00e9 mon adresse courriel",
+  "authStillUnverified": "Votre adresse n\u2019est pas encore v\u00e9rifi\u00e9e. Ouvrez le lien dans votre bo\u00eete de r\u00e9ception et r\u00e9essayez.",
+  "authVerificationSent": "Courriel de v\u00e9rification envoy\u00e9.",
+  "authResendWait": "Renvoyer dans {seconds} s",
+  "authVerified": "Votre adresse courriel est v\u00e9rifi\u00e9e",
+  "authDuplicate": "Un compte utilise d\u00e9j\u00e0 cette adresse. Connectez-vous ou r\u00e9initialisez votre mot de passe.",
+  "authInvalidEmail": "Saisissez une adresse courriel valide.",
+  "authInvalidCredentials": "L\u2019adresse courriel ou le mot de passe est incorrect.",
+  "authNetwork": "V\u00e9rifiez votre connexion Internet et r\u00e9essayez.",
+  "authRateLimit": "Trop de tentatives. R\u00e9essayez plus tard.",
+  "authUnavailable": "L\u2019authentification par courriel et mot de passe est actuellement indisponible.",
+  "authFailure": "Une erreur est survenue. Veuillez r\u00e9essayer.",
+  "authRegistrationIncomplete": "Votre compte a \u00e9t\u00e9 cr\u00e9\u00e9, mais la configuration a \u00e9t\u00e9 interrompue. Renvoyez le courriel de v\u00e9rification et r\u00e9essayez.",
+  "@authResendWait": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -25,6 +25,7 @@ class AppHeader extends StatelessWidget {
     this.eyebrow,
     this.action,
     this.back = true,
+    this.onBack,
     super.key,
   });
 
@@ -32,6 +33,7 @@ class AppHeader extends StatelessWidget {
   final String? eyebrow;
   final Widget? action;
   final bool back;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -41,7 +43,9 @@ class AppHeader extends StatelessWidget {
         if (back)
           IconButton(
             tooltip: context.strings.back,
-            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+            onPressed:
+                onBack ??
+                () => context.canPop() ? context.pop() : context.go('/'),
             icon: const Icon(Icons.chevron_left, color: AppColors.navy),
           ),
         Expanded(
@@ -192,6 +196,8 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.keyboard,
     this.obscure = false,
+    this.suffixIcon,
+    this.enabled = true,
     this.lines = 1,
     super.key,
   });
@@ -200,6 +206,8 @@ class AppTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboard;
   final bool obscure;
+  final Widget? suffixIcon;
+  final bool enabled;
   final int lines;
 
   @override
@@ -209,7 +217,8 @@ class AppTextField extends StatelessWidget {
     keyboardType: keyboard,
     obscureText: obscure,
     maxLines: lines,
-    decoration: InputDecoration(labelText: label),
+    enabled: enabled,
+    decoration: InputDecoration(labelText: label, suffixIcon: suffixIcon),
   );
 }
 
