@@ -13,22 +13,15 @@ import '../../features/couple/presentation/workspace_screen.dart';
 import '../../features/finance/presentation/finance_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/profile/presentation/account_screens.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/shopping/presentation/shopping_screen.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
 
-final appRouterProvider = Provider<GoRouter>((ref) {
+final appRouterProvider = Provider<GoRouter>(createAppRouter);
+
+GoRouter createAppRouter(Ref ref, {bool enableDemoRoutes = false}) {
   final refresh = ValueNotifier(0);
-  var signedOut = false;
-  ref.listen(authSessionProvider, (previous, next) {
-    if (previous?.asData?.value != null &&
-        next.asData != null &&
-        next.asData!.value == null) {
-      signedOut = true;
-    } else if (next.asData?.value != null) {
-      signedOut = false;
-    }
-    refresh.value++;
-  });
+  ref.listen(authSessionProvider, (_, _) => refresh.value++);
   ref.listen(registrationControllerProvider, (_, _) => refresh.value++);
   final router = GoRouter(
     refreshListenable: refresh,
@@ -41,7 +34,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (session.hasError) return path == '/auth-error' ? null : '/auth-error';
       final user = session.asData?.value;
       if (user == null) {
-        if (path == '/splash') return signedOut ? '/login' : '/welcome';
         if (const {
           '/welcome',
           '/login',
@@ -60,6 +52,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (!user.verified) {
         return path == '/verify' || path == '/language' ? null : '/verify';
       }
+      if (!enableDemoRoutes) return path == '/profile' ? null : '/profile';
       if (const {
         '/splash',
         '/auth-error',
@@ -68,8 +61,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/register',
         '/forgot-password',
         '/verify',
+        '/authenticated',
       }.contains(path)) {
-        return '/authenticated';
+        return '/profile';
       }
       return null;
     },
@@ -93,7 +87,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       for (final (path, screen) in <(String, Widget)>[
         ('/splash', const SplashScreen()),
         ('/auth-error', const AuthErrorScreen()),
-        ('/authenticated', const AuthenticatedScreen()),
         ('/welcome', const WelcomeScreen()),
         ('/login', const AuthFormScreen(AuthMode.login)),
         ('/register', const AuthFormScreen(AuthMode.register)),
@@ -103,6 +96,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ('/workspace/settings', const WorkspaceScreen(settings: true)),
         ('/articles', const ArticleLibrary()),
         ('/profile', const ProfileScreen()),
+        ('/authenticated', const ProfileScreen()),
         ('/settings', const SettingsScreen()),
         ('/language', const LanguageScreen()),
         ('/notifications', const NotificationsScreen()),
@@ -126,7 +120,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refresh.dispose();
   });
   return router;
-});
+}
 
 class _WorkspaceShell extends StatelessWidget {
   const _WorkspaceShell({required this.shell});

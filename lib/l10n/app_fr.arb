@@ -201,5 +201,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "profileEdit": "Modifier le profil",
+  "profileSaveChanges": "Enregistrer les modifications",
+  "profileCreated": "Compte cr\u00e9\u00e9 le",
+  "profileUsernameLength": "Saisissez un nom d\u2019utilisateur de 1 \u00e0 50 caract\u00e8res.",
+  "profileSaved": "Profil enregistr\u00e9.",
+  "profileSavedSyncFailed": "Votre profil a \u00e9t\u00e9 enregistr\u00e9. R\u00e9essayez de synchroniser le nom d\u2019utilisateur avec votre compte.",
+  "profileSyncName": "Synchroniser le nom d\u2019utilisateur",
+  "profileMissing": "Ce profil est indisponible. R\u00e9essayez de le charger.",
+  "profilePermission": "Firestore a refus\u00e9 l\u2019acc\u00e8s \u00e0 votre profil.",
+  "profileFailure": "Une erreur est survenue lors de l\u2019acc\u00e8s \u00e0 votre profil."
 }

@@ -8,6 +8,7 @@ const verifiedSession = (
   email: 'user@example.test',
   name: 'Camille',
   verified: true,
+  accountCreatedAt: null as DateTime?,
 );
 
 class TestAuth implements AuthRepository {
@@ -18,6 +19,11 @@ class TestAuth implements AuthRepository {
   int registrations = 0;
 
   Future<void> close() => _updates.close();
+
+  void setSession(AuthSession? next) {
+    session = next;
+    _updates.add(next);
+  }
 
   @override
   Stream<AuthSession?> watchSession() async* {
@@ -33,8 +39,13 @@ class TestAuth implements AuthRepository {
     String language,
   ) async {
     registrations++;
-    session = (uid: 'test', email: email, name: name, verified: false);
-    _updates.add(session);
+    setSession((
+      uid: 'test',
+      email: email,
+      name: name,
+      verified: false,
+      accountCreatedAt: null,
+    ));
   }
 
   @override

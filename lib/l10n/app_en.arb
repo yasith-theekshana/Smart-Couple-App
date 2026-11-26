@@ -201,5 +201,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "profileEdit": "Edit profile",
+  "profileSaveChanges": "Save changes",
+  "profileCreated": "Account created",
+  "profileUsernameLength": "Enter a username from 1 to 50 characters.",
+  "profileSaved": "Profile saved.",
+  "profileSavedSyncFailed": "Your profile was saved. Retry syncing the username to your sign-in account.",
+  "profileSyncName": "Sync username",
+  "profileMissing": "This profile is unavailable. Try loading it again.",
+  "profilePermission": "Firestore denied access to your profile.",
+  "profileFailure": "Something went wrong while accessing your profile."
 }

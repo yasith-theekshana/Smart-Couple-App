@@ -1,7 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-typedef AuthSession = ({String uid, String email, String? name, bool verified});
+typedef AuthSession = ({
+  String uid,
+  String email,
+  String? name,
+  bool verified,
+  DateTime? accountCreatedAt,
+});
 
 class RegistrationSetupFailure implements Exception {
   const RegistrationSetupFailure(this.uid);
@@ -52,6 +58,7 @@ class FirebaseAuthRepository implements AuthRepository {
           email: user.email ?? '',
           name: user.displayName,
           verified: verified,
+          accountCreatedAt: user.metadata.creationTime,
         );
       });
 

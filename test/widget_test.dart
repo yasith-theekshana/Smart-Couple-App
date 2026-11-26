@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,18 +7,34 @@ import 'package:smart_couple/app/router/app_router.dart';
 import 'package:smart_couple/core/services/demo_state.dart';
 import 'package:smart_couple/features/authentication/application/auth_repository.dart';
 
+import 'package:smart_couple/features/profile/application/profile_providers.dart';
+import 'package:smart_couple/features/profile/data/user_profile.dart';
+
 import 'test_auth.dart';
+import 'test_profiles.dart';
 
 Future<ProviderContainer> startApp(
   WidgetTester tester, {
   String path = '/',
   TestAuth? auth,
+  TestProfiles? profiles,
+  bool enableDemoRoutes = true,
 }) async {
   final repository = auth ?? TestAuth(verifiedSession);
+  final profileRepository = profiles ?? TestProfiles();
   addTearDown(repository.close);
+  addTearDown(profileRepository.close);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+        userProfileRepositoryProvider.overrideWithValue(profileRepository),
+        profileEditorProvider.overrideWithValue(_TestEditor(profileRepository)),
+        if (enableDemoRoutes)
+          appRouterProvider.overrideWith(
+            (ref) => createAppRouter(ref, enableDemoRoutes: true),
+          ),
+      ],
       child: const SmartCoupleApp(),
     ),
   );
@@ -41,6 +58,110 @@ Future<void> go(
 }
 
 void main() {
+  testWidgets(
+    'Verified users edit their profile while demo routes stay closed',
+    (tester) async {
+      final profiles = TestProfiles();
+      final container = await startApp(
+        tester,
+        path: '/finance',
+        profiles: profiles,
+        enableDemoRoutes: false,
+      );
+      expect(find.text('Camille'), findsOneWidget);
+      expect(find.text('Finances'), findsNothing);
+      await tester.tap(find.text('EDIT PROFILE'));
+      await tester.pumpAndSettle();
+      final username = find.byType(TextFormField);
+      await tester.enterText(username, '   ');
+      final save = find.text('SAVE CHANGES');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Enter a username from 1 to 50 characters.'),
+        findsOneWidget,
+      );
+      await tester.enterText(username, '  Camille Roy  ');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.text('Camille Roy'), findsOneWidget);
+      await container
+          .read(userProfileRepositoryProvider)
+          .updateProfile('test', language: 'fr');
+      await tester.pumpAndSettle();
+      expect(find.text('MODIFIER LE PROFIL'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Profile permission and network errors can be retried', (
+    tester,
+  ) async {
+    final profiles = TestProfiles()
+      ..loadError = FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+      );
+    await startApp(
+      tester,
+      path: '/profile',
+      profiles: profiles,
+      enableDemoRoutes: false,
+    );
+    expect(
+      find.text('Firestore denied access to your profile.'),
+      findsOneWidget,
+    );
+    expect(find.text('SIGN OUT'), findsOneWidget);
+    profiles.loadError = FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'unavailable',
+    );
+    await tester.tap(find.text('TRY AGAIN'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Check your internet connection and try again.'),
+      findsOneWidget,
+    );
+    expect(profiles.profiles, isEmpty);
+    profiles.loadError = null;
+    await tester.tap(find.text('TRY AGAIN'));
+    await tester.pumpAndSettle();
+    expect(find.text('Camille'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Account switch and logout dispose the previous profile listener',
+    (tester) async {
+      final profiles = TestProfiles();
+      final auth = TestAuth(verifiedSession);
+      await startApp(
+        tester,
+        path: '/profile',
+        auth: auth,
+        profiles: profiles,
+        enableDemoRoutes: false,
+      );
+      expect(profiles.activeListeners, {'test'});
+      auth.setSession((
+        uid: 'other',
+        email: 'other@example.test',
+        name: 'Morgan',
+        verified: true,
+        accountCreatedAt: null,
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Camille'), findsNothing);
+      expect(find.text('Morgan'), findsOneWidget);
+      expect(profiles.activeListeners, {'other'});
+      await auth.signOut();
+      await tester.pumpAndSettle();
+      expect(profiles.activeListeners, isEmpty);
+      expect(find.byType(TextFormField), findsNWidgets(2));
+    },
+  );
+
   testWidgets('Signed-out users see welcome and protected links go to login', (
     tester,
   ) async {
@@ -83,13 +204,14 @@ void main() {
       email: 'user@example.test',
       name: null,
       verified: false,
+      accountCreatedAt: null,
     ));
     final container = await startApp(tester, path: '/tasks', auth: auth);
     expect(find.text('Verify email'), findsOneWidget);
     await tester.tap(find.byType(FilledButton).first);
     await tester.pumpAndSettle();
     expect(find.text('Your email is verified'), findsOneWidget);
-    await tester.tap(find.byType(FilledButton).first);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'SIGN OUT'));
     await tester.pumpAndSettle();
     expect(find.byType(TextFormField), findsNWidgets(2));
     await go(tester, container, '/authenticated');
@@ -158,6 +280,9 @@ void main() {
     (tester) async {
       final container = await startApp(tester, path: '/language');
       await tester.tap(find.text('Français (FR)'));
+      await container
+          .read(userProfileRepositoryProvider)
+          .updateProfile('test', language: 'fr');
       await tester.pumpAndSettle();
       expect(find.text('Langue'), findsOneWidget);
       await go(tester, container, '/missing');
@@ -248,7 +373,9 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final container = await startApp(tester);
     for (final language in ['en', 'fr']) {
-      container.read(localeProvider.notifier).select(Locale(language));
+      await container
+          .read(userProfileRepositoryProvider)
+          .updateProfile('test', language: language);
       for (final path in [
         '/',
         '/finance',
@@ -282,4 +409,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Workspace settings'), findsOneWidget);
   });
+}
+
+class _TestEditor extends ProfileEditor {
+  _TestEditor(TestProfiles profiles)
+    : super(profiles, () => throw StateError('Unexpected Firebase call'));
+
+  @override
+  Future<void> synchronizeName(UserProfile profile) async {}
 }
